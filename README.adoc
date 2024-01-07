@@ -32,7 +32,7 @@ This repository contains necessary files to start development of Nintendo Switch
 
 . {ext-github-cargo-nx-new}[Create a new project] using `cargo-nx`.
 
-. Clone this repo as a submodule for you project. I recommend cloning into a `.dev-nx` directory{fn-task-dir-taken} (I shall assume this location further):
+. Clone this repo as a submodule for you project. I recommend cloning into a `.dev-nx` directory (I shall assume this location further):
 +
 [source, shell]
 ----
