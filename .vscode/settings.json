@@ -1,0 +1,9 @@
+{
+    "cSpell.customDictionaries": {
+        "technical-proper-noun": {
+            "path": "${workspaceFolder}/.vscode/dictionaries/technical-proper-noun",
+            "addWords": true,
+            "scope": "workspace"
+        },
+    },
+}
