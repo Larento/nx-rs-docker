@@ -1,0 +1,94 @@
+version: '3'
+vars:
+    PROJECT_NAME:
+        sh: basename {{.ROOT_DIR}}
+    CONTAINER_NAME: rust
+
+env:
+    ROOT_DIR: '{{.ROOT_DIR}}'
+    PROJECT_NAME: '{{.PROJECT_NAME}}'
+
+tasks:
+    default:
+        desc: Run build task.
+        cmds:
+        -   echo {{.PROJECT_NAME}}
+        -   echo {{.CONTAINER_NAME}}
+        -   task: build
+        silent: true
+
+    build:
+        desc: Build target using `cargo-nx` inside container.
+        dir: '{{.ROOT_DIR}}'
+        deps:
+        -   fetch-deps
+        -   start-compose
+        cmds:
+        -   task: exec-in-container
+            vars:
+                CMD: cargo nx build -- {{.CLI_ARGS}}
+
+    shell:
+        desc: Enter bash shell in container at project root.
+        interactive: true
+        cmds:
+        -   task: exec-in-container
+            vars:
+                CMD: bash
+
+    fetch-deps:
+        desc: Fetch project dependencies locally when `Cargo.toml` is updated.
+        dir: '{{.ROOT_DIR}}'
+        preconditions:
+        -   test -f Cargo.toml
+        cmds:
+        -   cargo fetch
+        sources:
+        -   Cargo.toml
+
+    start-compose:
+        desc: Start services defined in `docker-compose.yaml` in detached mode. Finish when ${CONTAINER_NAME} container is running.
+        dir: '{{.TASKFILE_DIR}}'
+        deps:
+        -   stop-compose
+        requires:
+            vars:
+            -   CONTAINER_NAME
+        preconditions:
+        -   test -f docker-compose.yaml
+        cmds:
+        -   docker compose up -d
+        status:
+        -   docker compose ps --status running | grep {{.CONTAINER_NAME}}
+
+    stop-compose:
+        desc: Stop services defined in `docker-compose.yaml`.
+        dir: '{{.TASKFILE_DIR}}'
+        preconditions:
+        -   test -f docker-compose.yaml
+        cmds:
+        -   docker compose down --remove-orphans
+
+    attach-to-container:
+        desc: Attach to ${CONTAINER_NAME} container.
+        interactive: true
+        dir: '{{.TASKFILE_DIR}}'
+        deps:
+        -   start-compose
+        requires:
+            vars:
+            -   CONTAINER_NAME
+        cmds:
+        -   docker compose attach {{.CONTAINER_NAME}}
+
+    exec-in-container:
+        desc: Execute command in ${CONTAINER_NAME} container's shell.
+        dir: '{{.TASKFILE_DIR}}'
+        deps:
+        -   start-compose
+        requires:
+            vars:
+            -   CMD
+            -   CONTAINER_NAME
+        cmds:
+        -   docker compose exec --workdir '/{{.PROJECT_NAME}}' -it {{.CONTAINER_NAME}} sh -c {{.CMD}}
