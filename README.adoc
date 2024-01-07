@@ -1,0 +1,82 @@
+= nx-rs-docker
+:icons: font
+
+:ext-docker-engine: https://docs.docker.com/engine/
+:ext-docker-compose: https://docs.docker.com/compose/
+:ext-task-go: https://taskfile.dev/
+
+This repository contains necessary files to start development of Nintendo Switch homebrew in Rust.
+
+
+== Prerequisites
+- {ext-docker-engine}[Docker Engine] `^24.0.0`
+- {ext-docker-compose}[Docker Compose] `^2.20.2`
+- {ext-task-go}[Task] `^3.33.0`
+
+
+== Files
+
+- `Dockerfile` - Docker image definition based on `devkitPro/devkita64` image with Rust nightly toolchain installed
+- `docker-compose.yaml` - Docker Compose configuration file to have easier control of the container
+- `Taskfile` - configuration file for Task runner/build tool (Taskfile for short) to access Rust tooling inside the container
+
+
+== Installation
+
+:fn-task-dir-taken: pass:c,q[footnote:[I've thought about using a `.task` directory, but that one is already used by the Task program itself.]]
+
+To install clone this repo as a submodule for you project. I recommend cloning into a `.dev` directory (I shall assume this location further).{fn-task-dir-taken} To do this, run:
+
+[source, shell]
+----
+git submodule add https://github.com/Larento/nx-rs-docker .dev
+----
+
+To actually use the included Taskfile in your project, you need to create your own Taskfile that extends the provided one at project root. It may simply look like this:
+
+[source, yaml]
+----
+includes:
+    nx: .dev/Taskfile.yaml
+----
+
+This includes the provided Taskfile in `nx` namespace. You may choose any name for the namespace however – the `nx` is just an example. To execute the task run:
+
+[source, shell]
+----
+task nx:<task-name>
+----
+
+At this point the tree structure of `.dev` directory should look roughly like this:
+----
+. <1>
+├── .dev <2>
+│   ├── Dockerfile
+│   ├── Taskfile.yaml <3>
+│   └── docker-compose.yaml
+├── Taskfile.yaml <4>
+└── ... <5>
+----
+<1> Project root
+<2> Submodule directory
+<3> Provided Taskfile
+<4> Project Taskfile
+<5> The rest of project files
+
+
+[aside]
+====
+Keep in mind, that by default Git won't clone submodules inside a repo. You either need to enable that in global Git settings:
+
+[source, shell]
+----
+git config --global submodule.recurse true
+----
+
+Or clone the repo recursively:
+
+[source, shell]
+----
+git clone --recursive <repo>
+----
+====
