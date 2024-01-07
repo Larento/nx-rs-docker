@@ -1,14 +1,20 @@
 = nx-rs-docker
+:toc: preamble
+
 :icons: font
 
+:ext-rust: https://www.rust-lang.org/
+:ext-cargo-nx: https://github.com/aarch64-switch-rs/cargo-nx
 :ext-docker-engine: https://docs.docker.com/engine/
 :ext-docker-compose: https://docs.docker.com/compose/
 :ext-task-go: https://taskfile.dev/
 
-This repository contains necessary files to start development of Nintendo Switch homebrew in Rust.
+This repository contains necessary files to start development of Nintendo Switch homebrew in Rust using a Docker container.
 
 
 == Prerequisites
+- {ext-rust}[Rust] `^1.75.0` (not used for building)
+- {ext-cargo-nx}[`cargo-nx`]
 - {ext-docker-engine}[Docker Engine] `^24.0.0`
 - {ext-docker-compose}[Docker Compose] `^2.20.2`
 - {ext-task-go}[Task] `^3.33.0`
@@ -16,41 +22,50 @@ This repository contains necessary files to start development of Nintendo Switch
 
 == Files
 
-- `Dockerfile` - Docker image definition based on `devkitPro/devkita64` image with Rust nightly toolchain installed
-- `docker-compose.yaml` - Docker Compose configuration file to have easier control of the container
+- `Dockerfile` - Docker image definition based on a `devkitPro/devkita64` image with Rust nightly toolchain installed
+- `docker-compose.yaml` - Docker Compose configuration file for volume mounting and easier container control
 - `Taskfile` - configuration file for Task runner/build tool (Taskfile for short) to access Rust tooling inside the container
 
 
 == Installation
+:ext-github-cargo-nx-new: https://github.com/aarch64-switch-rs/cargo-nx#new-subcommand
 
-:fn-task-dir-taken: pass:c,q[footnote:[I've thought about using a `.task` directory, but that one is already used by the Task program itself.]]
+. {ext-github-cargo-nx-new}[Create a new project] using `cargo-nx`.
 
-To install clone this repo as a submodule for you project. I recommend cloning into a `.dev` directory (I shall assume this location further).{fn-task-dir-taken} To do this, run:
-
+. Clone this repo as a submodule for you project. I recommend cloning into a `.dev-nx` directory{fn-task-dir-taken} (I shall assume this location further):
++
 [source, shell]
 ----
-git submodule add https://github.com/Larento/nx-rs-docker .dev
+git submodule add https://github.com/Larento/nx-rs-docker .dev-nx
 ----
 
-To actually use the included Taskfile in your project, you need to create your own Taskfile that extends the provided one at project root. It may simply look like this:
-
+. To use the provided Taskfile in your project, you need to include it inside your own `Taskfile.yaml` file at project root. The simplest one might look like this:
++
 [source, yaml]
 ----
+version: '3'
+vars:
+    INCLUDES_DIR: '.dev-nx' <1>
 includes:
-    nx: .dev/Taskfile.yaml
+    nx:
+        taskfile: '{{.INCLUDES_DIR}}/Taskfile.yaml' <2>
+        dir: '{{.INCLUDES_DIR}}' <3>
 ----
-
-This includes the provided Taskfile in `nx` namespace. You may choose any name for the namespace however – the `nx` is just an example. To execute the task run:
-
+<1> `INCLUDES_DIR` - path to submodule directory, from which the Taskfile is included.
+<2> The provided Taskfile is included in `nx` namespace (this is just an example, you may choose any name).
+<3> It's very important to specify the directory from which the included tasks are executed.
++
+To execute tasks from included Taskfile run:
++
 [source, shell]
 ----
 task nx:<task-name>
 ----
 
-At this point the tree structure of `.dev` directory should look roughly like this:
+. At this point the tree structure of `.dev-nx` directory should look roughly like this:
 ----
 . <1>
-├── .dev <2>
+├── .dev-nx <2>
 │   ├── Dockerfile
 │   ├── Taskfile.yaml <3>
 │   └── docker-compose.yaml
@@ -64,19 +79,38 @@ At this point the tree structure of `.dev` directory should look roughly like th
 <5> The rest of project files
 
 
-[aside]
-====
-Keep in mind, that by default Git won't clone submodules inside a repo. You either need to enable that in global Git settings:
+== How it works
+
+. Docker image is built. For reuse purposes, the source code is not copied over at build stage.
+. Directories containing the source code `src/` and built binaries `target/` are mounted as bind mounts.
+. Project is built using `cargo-nx` inside the container.
+
+
+== Things to keep in mind
+=== Cloning your repository
+
+By default Git won't clone submodules inside a repo. You either need to enable that in global Git settings:
 
 [source, shell]
 ----
 git config --global submodule.recurse true
 ----
 
-Or clone the repo recursively:
+Or clone with `--recurse-submodules` option:
 
 [source, shell]
 ----
-git clone --recursive <repo>
+git clone --recurse-submodules <repo>
 ----
-====
+
+
+=== Using `rust-analyzer`
+
+To be able to look up function definitions using `rust-analyzer`, you should fetch sources for all crates locally (not in Docker container) with:
+
+[source, shell]
+----
+cargo fetch
+----
+
+In any case, if you are using the provided Taskfile, this is done automatically for you.
