@@ -1,4 +1,5 @@
-# File syncing config
-.accordance-config.yml
+# Task
+.task/
 
-.task
+# File sync config
+.accordance-config.yml
