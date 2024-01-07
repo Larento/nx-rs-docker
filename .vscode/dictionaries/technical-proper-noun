@@ -1,1 +1,6 @@
+cmds
+devkita64
+rust-analyzer
 taskfile
+vars
+workdir
