@@ -63,6 +63,7 @@ task nx:<task-name>
 ----
 
 . At this point the tree structure of `.dev-nx` directory should look roughly like this:
++
 ----
 . <1>
 ├── .dev-nx <2>
