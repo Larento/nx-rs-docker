@@ -1,0 +1,10 @@
+version: '3.8'
+services:
+    rust:
+        image: nx-rs-docker-rust
+        container_name: rust
+        build: .
+        volumes:
+        -   '${ROOT_DIR}/src:/${PROJECT_NAME}/src'
+        -   '${ROOT_DIR}/Cargo.toml:/${PROJECT_NAME}/Cargo.toml'
+        -   '${ROOT_DIR}/target:/${PROJECT_NAME}/target'
