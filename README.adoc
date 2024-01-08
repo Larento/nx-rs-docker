@@ -22,7 +22,7 @@ This repository contains necessary files to start development of Nintendo Switch
 
 == Files
 
-- `Dockerfile` - Docker image definition based on a `devkitPro/devkita64` image with Rust nightly toolchain installed
+- `Dockerfile` - Docker image definition based on `ghcr.io/rust-lang/rust:nightly`
 - `docker-compose.yaml` - Docker Compose configuration file for volume mounting and easier container control
 - `Taskfile` - configuration file for Task runner/build tool (Taskfile for short) to access Rust tooling inside the container
 
