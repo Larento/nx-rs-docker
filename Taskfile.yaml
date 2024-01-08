@@ -3,17 +3,17 @@ vars:
     PROJECT_NAME:
         sh: basename {{.ROOT_DIR}}
     CONTAINER_NAME: rust
+    IS_CONTAINER_RUNNING: docker compose ps --status running | grep {{.CONTAINER_NAME}} >/dev/null
 
 env:
     ROOT_DIR: '{{.ROOT_DIR}}'
-    PROJECT_NAME: '{{.PROJECT_NAME}}'
+    TASKFILE_DIR: '{{.TASKFILE_DIR}}'
+    WORKING_DIR: '/apps/{{.PROJECT_NAME}}'
 
 tasks:
     default:
         desc: Run build task.
         cmds:
-        -   echo {{.PROJECT_NAME}}
-        -   echo {{.CONTAINER_NAME}}
         -   task: build
         silent: true
 
@@ -22,7 +22,6 @@ tasks:
         dir: '{{.ROOT_DIR}}'
         deps:
         -   fetch-deps
-        -   start-compose
         cmds:
         -   task: exec-in-container
             vars:
@@ -41,35 +40,62 @@ tasks:
         dir: '{{.ROOT_DIR}}'
         preconditions:
         -   test -f Cargo.toml
+        ignore_error: true
+        # Skip this task if `cargo` is not installed. Have to clean checksum files because manually, because we tell the task runner the task was completed successfully, when it wasn't.
         cmds:
-        -   cargo fetch
+        -   cargo fetch 2>/dev/null || rm '{{.CHECKSUM_FILES}}' >/dev/null 2>&1
+        method: checksum
         sources:
         -   Cargo.toml
+        vars:
+            CHECKSUM_FILES: '{{.ROOT_DIR}}/.task/checksum/*fetch-deps'
 
     start-compose:
-        desc: Start services defined in `docker-compose.yaml` in detached mode. Finish when ${CONTAINER_NAME} container is running.
+        desc: Start services defined in `docker-compose.yaml` in detached mode.
+        summary: The task waits until all services are running.
         dir: '{{.TASKFILE_DIR}}'
         deps:
-        -   stop-compose
+        -   build-compose
         requires:
             vars:
             -   CONTAINER_NAME
         preconditions:
         -   test -f docker-compose.yaml
         cmds:
-        -   docker compose up -d
-        status:
-        -   docker compose ps --status running | grep {{.CONTAINER_NAME}}
+        -   docker compose up -d --wait
+        sources:
+        -   docker-compose.yaml
+
+    rebuild-compose:
+        desc: Forcefully rebuild services defined in `docker-compose.yaml`.
+        prompt: This command rebuilds the Docker image from scratch, which might take a long time. Are you sure you want to proceed?
+        dir: '{{.TASKFILE_DIR}}'
+        cmds:
+        -   docker compose build --no-cache
+
+    build-compose:
+        desc: Build services defined in `docker-compose.yaml`.
+        dir: '{{.TASKFILE_DIR}}'
+        cmds:
+        -   docker compose build
+        sources:
+        -   Dockerfile
 
     stop-compose:
+        aliases:
+        -   stop
         desc: Stop services defined in `docker-compose.yaml`.
         dir: '{{.TASKFILE_DIR}}'
         preconditions:
         -   test -f docker-compose.yaml
         cmds:
         -   docker compose down --remove-orphans
+        status:
+        -   '{{.IS_CONTAINER_RUNNING}} || true'
 
     attach-to-container:
+        aliases:
+        -   attach
         desc: Attach to ${CONTAINER_NAME} container.
         interactive: true
         dir: '{{.TASKFILE_DIR}}'
@@ -82,6 +108,8 @@ tasks:
         -   docker compose attach {{.CONTAINER_NAME}}
 
     exec-in-container:
+        aliases:
+        -   exec
         desc: Execute command in ${CONTAINER_NAME} container's shell.
         dir: '{{.TASKFILE_DIR}}'
         deps:
@@ -91,4 +119,4 @@ tasks:
             -   CMD
             -   CONTAINER_NAME
         cmds:
-        -   docker compose exec --workdir '/{{.PROJECT_NAME}}' -it {{.CONTAINER_NAME}} sh -c {{.CMD}}
+        -   docker compose exec -it {{.CONTAINER_NAME}} sh -c '{{.CMD}}'
