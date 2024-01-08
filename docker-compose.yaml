@@ -3,8 +3,14 @@ services:
     rust:
         image: nx-rs-docker-rust
         container_name: rust
-        build: .
+        build:
+            dockerfile: '${TASKFILE_DIR}/Dockerfile'
+            context: '${ROOT_DIR}'
+        tty: true
+        working_dir: '${WORKING_DIR}'
         volumes:
-        -   '${ROOT_DIR}/src:/${PROJECT_NAME}/src'
-        -   '${ROOT_DIR}/Cargo.toml:/${PROJECT_NAME}/Cargo.toml'
-        -   '${ROOT_DIR}/target:/${PROJECT_NAME}/target'
+        -   '${ROOT_DIR}/Cargo.toml:/${WORKING_DIR}/Cargo.toml:ro'
+        -   '${ROOT_DIR}/Cargo.lock:/${WORKING_DIR}/Cargo.lock:ro'
+        -   '${ROOT_DIR}/.cargo:${WORKING_DIR}/.cargo:ro'
+        -   '${ROOT_DIR}/src:${WORKING_DIR}/src:ro'
+        -   '${ROOT_DIR}/target:/${WORKING_DIR}/target:rw'
